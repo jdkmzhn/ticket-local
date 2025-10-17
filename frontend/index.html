@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zammad KI-Integration</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="header-title">
+                    <h1>🎫 Zammad KI-Integration</h1>
+                    <p class="subtitle">Intelligente Ticketerstellung und Beantwortung</p>
+                </div>
+                <div class="ai-status" id="ai-status">
+                    <span class="ai-status-label">KI-Modell:</span>
+                    <span class="ai-status-value" id="ai-status-value">Nicht konfiguriert</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <div class="tabs">
+            <button class="tab-button active" data-tab="create">
+                <span class="tab-icon">✨</span>
+                Ticket erstellen
+            </button>
+            <button class="tab-button" data-tab="respond">
+                <span class="tab-icon">💬</span>
+                Ticket beantworten
+            </button>
+            <button class="tab-button" data-tab="overview">
+                <span class="tab-icon">📊</span>
+                Kunden-Übersicht
+            </button>
+            <button class="tab-button" data-tab="chatbot">
+                <span class="tab-icon">🤖</span>
+                KI-Chat
+            </button>
+            <button class="tab-button" data-tab="settings">
+                <span class="tab-icon">⚙️</span>
+                Einstellungen
+            </button>
+        </div>
+
+        <!-- Tab 1: Ticket erstellen -->
+        <div id="create-tab" class="tab-content active">
+            <!-- Schritt 1: Texteingabe -->
+            <section class="card" id="text-input-section">
+                <h2>📝 Anfrage analysieren</h2>
+                <p class="description">
+                    Kopieren Sie den Text der Kundenanfrage (z.B. E-Mail oder Kontaktformular) in das Feld unten.
+                    Die KI extrahiert automatisch alle relevanten Informationen.
+                </p>
+                
+                <div class="form-group">
+                    <label for="request-text">Kundenanfrage</label>
+                    <textarea 
+                        id="request-text" 
+                        class="textarea-large" 
+                        placeholder="Fügen Sie hier den kompletten Text der Kundenanfrage ein...&#10;&#10;Beispiel:&#10;Sehr geehrte Damen und Herren,&#10;&#10;ich bin Max Mustermann von der Musterfirma GmbH und habe ein Problem mit...&#10;&#10;Mit freundlichen Grüßen&#10;Max Mustermann&#10;max.mustermann@example.com"
+                        rows="12"
+                    ></textarea>
+                </div>
+
+                <button id="analyze-btn" class="btn btn-primary btn-large">
+                    <span class="btn-icon">🔍</span>
+                    Anfrage analysieren
+                </button>
+
+                <div id="analysis-loading" class="loading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>KI analysiert die Anfrage...</p>
+                </div>
+            </section>
+
+            <!-- Schritt 2: Verifizierung & Korrektur -->
+            <section class="card" id="verification-section" style="display: none;">
+                <h2>✅ Daten prüfen und bestätigen</h2>
+                <p class="description">
+                    Überprüfen Sie die extrahierten Daten und nehmen Sie bei Bedarf Korrekturen vor.
+                </p>
+
+                <div id="customer-status" class="status-box"></div>
+                <div id="organization-status" class="status-box"></div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="customer-name">Kundenname *</label>
+                        <input type="text" id="customer-name" class="input" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="customer-email">E-Mail-Adresse *</label>
+                        <input type="email" id="customer-email" class="input" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="organization">Organisation/Firma</label>
+                        <input type="text" id="organization" class="input" placeholder="Optional">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="group">Zuständiges Team</label>
+                        <select id="group" class="input">
+                            <option value="Support">Support</option>
+                            <option value="Beratung">Beratung</option>
+                            <option value="Technik">Technik</option>
+                            <option value="Vertrieb">Vertrieb</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="ticket-title">Ticket-Titel *</label>
+                    <input type="text" id="ticket-title" class="input" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="ticket-body">Ticket-Inhalt</label>
+                    <textarea id="ticket-body" class="textarea" rows="8"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="create-as-email" checked>
+                        Als E-Mail erstellen (Kunde kann benachrichtigt werden und Sie können antworten)
+                    </label>
+                    <small class="form-hint">
+                        Wenn deaktiviert, wird das Ticket als interne Notiz erstellt.
+                    </small>
+                </div>
+
+                <div class="button-group">
+                    <button id="back-btn" class="btn btn-secondary">
+                        ← Zurück
+                    </button>
+                    <button id="create-ticket-btn" class="btn btn-success btn-large">
+                        <span class="btn-icon">🎫</span>
+                        Kunde und Ticket in Zammad erstellen
+                    </button>
+                </div>
+
+                <div id="create-loading" class="loading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Erstelle Ticket in Zammad...</p>
+                </div>
+            </section>
+
+            <!-- Erfolgsmeldung -->
+            <div id="success-section" class="card success-card" style="display: none;">
+                <div class="success-icon">✅</div>
+                <h2>Ticket erfolgreich erstellt!</h2>
+                <div id="success-details"></div>
+                <button id="new-ticket-btn" class="btn btn-primary">
+                    Neues Ticket erstellen
+                </button>
+            </div>
+        </div>
+
+        <!-- Tab 2: Ticket beantworten -->
+        <div id="respond-tab" class="tab-content">
+            <!-- Ticket laden -->
+            <section class="card">
+                <h2>🔍 Ticket laden</h2>
+                <p class="description">
+                    Geben Sie die Ticket-ID ein, um den Verlauf zu laden.
+                </p>
+
+                <div class="form-inline">
+                    <div class="form-group flex-grow">
+                        <label for="ticket-id">Ticket-ID oder Nummer</label>
+                        <input type="text" id="ticket-id" class="input" placeholder="z.B. 12345">
+                    </div>
+                    <button id="load-ticket-btn" class="btn btn-primary">
+                        <span class="btn-icon">📥</span>
+                        Ticket laden
+                    </button>
+                </div>
+
+                <div id="load-loading" class="loading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Lade Ticket...</p>
+                </div>
+            </section>
+
+            <!-- Ticketverlauf -->
+            <section class="card" id="ticket-history-section" style="display: none;">
+                <h2>📜 Ticketverlauf</h2>
+                <div id="ticket-info" class="ticket-info"></div>
+                <div id="ticket-history" class="ticket-history"></div>
+            </section>
+
+            <!-- Antwort generieren -->
+            <section class="card" id="response-section" style="display: none;">
+                <h2>💡 KI-Antwort generieren</h2>
+                <p class="description">
+                    Geben Sie eine kurze Anweisung ein, was die KI-Antwort beinhalten soll.
+                </p>
+
+                <div class="form-group">
+                    <label for="response-instruction">Anweisung für die KI</label>
+                    <textarea 
+                        id="response-instruction" 
+                        class="textarea" 
+                        placeholder="z.B. Nach den Log-Dateien fragen und einen Link zur Dokumentation schicken"
+                        rows="3"
+                    ></textarea>
+                </div>
+
+                <button id="generate-response-btn" class="btn btn-primary">
+                    <span class="btn-icon">✨</span>
+                    KI-Antwort generieren
+                </button>
+
+                <div id="generate-loading" class="loading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Generiere Antwort...</p>
+                </div>
+
+                <!-- Generierte Antwort -->
+                <div id="generated-response-section" style="display: none;">
+                    <h3>📝 Generierte Antwort</h3>
+                    <div class="form-group">
+                        <label for="response-text">Antwort (bearbeitbar)</label>
+                        <textarea id="response-text" class="textarea" rows="10"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="internal-note">
+                            Als interne Notiz speichern (nicht für Kunde sichtbar)
+                        </label>
+                    </div>
+
+                    <button id="send-response-btn" class="btn btn-success btn-large">
+                        <span class="btn-icon">📤</span>
+                        Antwort senden
+                    </button>
+
+                    <div id="send-loading" class="loading" style="display: none;">
+                        <div class="spinner"></div>
+                        <p>Sende Antwort...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Erfolg Antwort -->
+            <div id="response-success" class="card success-card" style="display: none;">
+                <div class="success-icon">✅</div>
+                <h2>Antwort erfolgreich gesendet!</h2>
+                <button id="new-response-btn" class="btn btn-primary">
+                    Weitere Antwort verfassen
+                </button>
+            </div>
+        </div>
+
+        <!-- Tab 3: KI-Chat -->
+        <div id="chatbot-tab" class="tab-content">
+            <section class="card">
+                <h2>🤖 KI-Chat</h2>
+                <p class="description">
+                    Chatten Sie frei mit der KI - unabhängig vom Ticketsystem. Nutzt das in den Einstellungen konfigurierte KI-Modell.
+                </p>
+                
+                <!-- Chat Container -->
+                <div class="chat-container">
+                    <div class="chat-messages" id="chat-messages">
+                        <div class="message bot-message">
+                            <div class="message-avatar">🤖</div>
+                            <div class="message-content">
+                                <div class="message-text">
+                                    Hallo! Ich bin Ihr KI-Assistent. Sie können mich alles fragen - ich helfe gerne bei verschiedenen Themen. 
+                                    Wie kann ich Ihnen heute helfen?
+                                </div>
+                                <div class="message-time" id="welcome-time"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Chat Input -->
+                    <div class="chat-input-container">
+                        <div class="chat-input-wrapper">
+                            <textarea 
+                                id="chat-input" 
+                                class="chat-input" 
+                                placeholder="Schreiben Sie Ihre Nachricht hier..."
+                                rows="3"
+                            ></textarea>
+                            <button id="chat-send-btn" class="chat-send-btn" disabled>
+                                <span class="btn-icon">📤</span>
+                                Senden
+                            </button>
+                        </div>
+                        <div class="chat-actions">
+                            <input 
+                                type="file" 
+                                id="chat-file-input" 
+                                accept=".pdf,.doc,.docx,.txt,.md,.csv"
+                                style="display: none;"
+                            />
+                            <button id="chat-upload-btn" class="btn btn-secondary btn-sm">
+                                <span class="btn-icon">📎</span>
+                                Dokument hochladen
+                            </button>
+                            <button id="chat-clear-btn" class="btn btn-secondary btn-sm">
+                                <span class="btn-icon">🗑️</span>
+                                Chat leeren
+                            </button>
+                            <div class="chat-status" id="chat-status">
+                                <span class="status-indicator"></span>
+                                <span class="status-text">Bereit</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Tab 4: Einstellungen -->
+        <div id="settings-tab" class="tab-content">
+            <section class="card">
+                <h2>⚙️ Einstellungen</h2>
+                <p class="description">
+                    Konfigurieren Sie hier alle API-Schlüssel und KI-Modelle. Diese werden sicher in Ihrem Browser gespeichert.
+                </p>
+
+                <div class="settings-info">
+                    <p><strong>💡 Hinweis:</strong> Alle Einstellungen werden lokal in Ihrem Browser gespeichert und nie an Dritte weitergegeben.</p>
+                </div>
+
+                <h3>🤖 KI-Provider Auswahl</h3>
+                <p class="description">
+                    Wählen Sie zwischen Eden AI (Cloud) oder Ihrer lokalen KI-Instanz.
+                </p>
+
+                <div class="form-group">
+                    <label for="ai-provider-select">KI-Provider:</label>
+                    <select id="ai-provider-select" class="form-control">
+                        <option value="edenai">☁️ Eden AI (Cloud)</option>
+                        <option value="local">🏠 Lokale KI (Open WebUI)</option>
+                    </select>
+                    <small class="form-text">
+                        ☁️ <strong>Eden AI</strong>: Verschiedene Cloud-Modelle, Pay-per-Use<br>
+                        🏠 <strong>Lokale KI</strong>: Kostenlos, vollständige Kontrolle, Datenschutz
+                    </small>
+                </div>
+
+                <!-- Eden AI Konfiguration -->
+                <div id="edenai-config" class="provider-config">
+                    <h4>☁️ Eden AI Konfiguration</h4>
+                    <div class="form-group">
+                        <label for="settings-edenai-key">Eden AI API-Schlüssel</label>
+                        <div style="position: relative;">
+                            <input type="password" id="settings-edenai-key" class="input" placeholder="Ihren Eden AI API-Schlüssel hier eingeben" style="padding-right: 45px;">
+                            <button type="button" class="toggle-password-btn" onclick="togglePassword('settings-edenai-key')" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 1.2rem;">
+                                👁️
+                            </button>
+                        </div>
+                        <small class="form-hint">Erhalten Sie Ihren API-Schlüssel unter: <a href="https://www.edenai.co/" target="_blank">edenai.co</a></small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edenai-model-select">KI-Modell:</label>
+                        <select id="edenai-model-select" class="form-control">
+                            <option value="openai">OpenAI GPT-3.5-turbo (Empfohlen)</option>
+                            <option value="mistral">Mistral Large (Günstiger)</option>
+                            <option value="mistral-small">Mistral Small (Sehr günstig)</option>
+                            <option value="claude">Claude 3 Haiku (Schnell)</option>
+                        </select>
+                        <small class="form-text">
+                            💡 <strong>OpenAI</strong>: Beste Qualität, höhere Kosten<br>
+                            💰 <strong>Mistral</strong>: 80% günstiger, sehr gute Qualität<br>
+                            ⚡ <strong>Claude</strong>: Sehr schnell, moderate Kosten
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Lokale KI Konfiguration -->
+                <div id="local-ai-config" class="provider-config" style="display: none;">
+                    <h4>🏠 Lokale KI Konfiguration</h4>
+                    <div class="form-group">
+                        <label for="local-ai-url">Open WebUI URL:</label>
+                        <input type="url" id="local-ai-url" class="input" placeholder="https://ki.kmzserver.de" value="https://ki.kmzserver.de">
+                        <small class="form-hint">URL deiner Open WebUI-Instanz</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="local-ai-key">API-Schlüssel:</label>
+                        <div style="position: relative;">
+                            <input type="password" id="local-ai-key" class="input" placeholder="Dein Open WebUI API-Schlüssel" style="padding-right: 45px;">
+                            <button type="button" class="toggle-password-btn" onclick="togglePassword('local-ai-key')" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 1.2rem;">
+                                👁️
+                            </button>
+                        </div>
+                        <small class="form-hint">API-Schlüssel für die Authentifizierung</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="local-ai-model">Lokales Modell:</label>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <select id="local-ai-model" class="form-control" style="flex: 1;">
+                                <option value="">Bitte URL und API-Schlüssel eingeben...</option>
+                            </select>
+                            <button id="load-models-btn" class="btn btn-secondary" style="white-space: nowrap;">
+                                🔄 Modelle laden
+                            </button>
+                        </div>
+                        <small class="form-hint">Klicken Sie auf "Modelle laden", um verfügbare Modelle vom Server abzurufen</small>
+                        <div id="models-loading" class="loading" style="display: none; margin-top: 10px;">
+                            <div class="spinner"></div>
+                            <p>Lade Modelle...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="cost-display" class="cost-info" style="display: none;">
+                    <h4>💰 Letzte Kosten:</h4>
+                    <div id="cost-details"></div>
+                </div>
+
+                <h3>🎫 Zammad Konfiguration</h3>
+                <div class="form-group">
+                    <label for="settings-zammad-url">Zammad URL</label>
+                    <input type="url" id="settings-zammad-url" class="input" placeholder="https://ihre-zammad-instance.com">
+                    <small class="form-hint">Format: https://ihre-domain.com (ohne trailing slash)</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="settings-zammad-token">Zammad API-Token</label>
+                    <div style="position: relative;">
+                        <input type="password" id="settings-zammad-token" class="input" placeholder="Ihren Zammad API-Token hier eingeben" style="padding-right: 45px;">
+                        <button type="button" class="toggle-password-btn" onclick="togglePassword('settings-zammad-token')" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 1.2rem;">
+                            👁️
+                        </button>
+                    </div>
+                    <small class="form-hint">Erstellen Sie einen Token in Zammad unter: Admin → API-Tokens</small>
+                </div>
+
+                <div class="button-group">
+                    <button id="test-connection-btn" class="btn btn-secondary">
+                        <span class="btn-icon">🔌</span>
+                        Verbindung testen
+                    </button>
+                    <button id="save-export-settings-btn" class="btn btn-primary">
+                        <span class="btn-icon">💾</span>
+                        Einstellungen speichern & exportieren
+                    </button>
+                    <button id="load-settings-btn" class="btn btn-secondary">
+                        <span class="btn-icon">📥</span>
+                        Einstellungen laden
+                    </button>
+                    <button id="clear-settings-btn" class="btn btn-danger">
+                        <span class="btn-icon">🗑️</span>
+                        Alle Einstellungen löschen
+                    </button>
+                </div>
+
+                <div id="test-loading" class="loading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Teste Verbindung...</p>
+                </div>
+
+                <div class="settings-help">
+                    <h4>💡 Hilfe</h4>
+                    <p><strong>Speichern & Exportieren:</strong> Speichert alle Einstellungen lokal und schlägt einen Speicherort für die Backup-Datei vor.</p>
+                    <p><strong>Einstellungen laden:</strong> Lädt Einstellungen aus einer zuvor exportierten Datei. Wird nur angezeigt, wenn keine Einstellungen gespeichert sind.</p>
+                </div>
+
+                <input type="file" id="load-file-input" accept=".json" style="display: none;">
+            </section>
+        </div>
+
+        <!-- Tab 4: Kunden-Übersicht -->
+        <div id="overview-tab" class="tab-content">
+            <section class="card">
+                <h2>📊 Kunden-Übersicht</h2>
+                <p class="description">
+                    Analysieren Sie die Ticket-Historie von Kunden oder Organisationen mit KI-Unterstützung.
+                    Erhalten Sie intelligente Zusammenfassungen und Trends.
+                </p>
+
+                <div class="form-group">
+                    <label for="search-type">Suchtyp:</label>
+                    <select id="search-type" class="form-control">
+                        <option value="customer">👤 Kunde (Name oder E-Mail)</option>
+                        <option value="organization">🏢 Organisation (Name)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="search-input" id="search-label">Kundensuche:</label>
+                    <div class="autocomplete-wrapper">
+                        <input type="text" id="search-input" class="input" placeholder="Name oder E-Mail eingeben..." autocomplete="off">
+                        <div id="customer-suggestions" class="suggestions-dropdown" style="display: none;"></div>
+                    </div>
+                    <small class="form-hint" id="search-hint">Mindestens 2 Zeichen eingeben für Vorschläge</small>
+                    <div id="selected-customer" class="selected-customer" style="display: none;"></div>
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="include-summary" checked>
+                        <span class="checkmark"></span>
+                        🤖 KI-Zusammenfassung erstellen
+                    </label>
+                    <small class="form-hint">Erstellt eine intelligente Analyse der Ticket-Historie</small>
+                </div>
+
+                <div class="button-group">
+                    <button id="search-tickets-btn" class="btn btn-primary">
+                        <span class="btn-icon">🔍</span>
+                        Tickets suchen
+                    </button>
+                    <button id="clear-overview-btn" class="btn btn-secondary">
+                        <span class="btn-icon">🗑️</span>
+                        Zurücksetzen
+                    </button>
+                </div>
+
+                <div id="overview-loading" class="loading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Lade Tickets und erstelle Zusammenfassung...</p>
+                </div>
+
+                <div id="overview-results" style="display: none;">
+                    <div class="overview-header">
+                        <h3 id="overview-title"></h3>
+                        <div class="overview-stats">
+                            <span class="stat-item">
+                                <span class="stat-number" id="ticket-count">0</span>
+                                <span class="stat-label">Tickets</span>
+                            </span>
+                            <span class="stat-item">
+                                <span class="stat-number" id="time-range">-</span>
+                                <span class="stat-label">Zeitraum</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div id="ai-summary" class="ai-summary" style="display: none;">
+                        <h4>🤖 KI-Zusammenfassung</h4>
+                        <div id="summary-content" class="summary-content"></div>
+                        <div id="summary-cost" class="summary-cost" style="display: none;"></div>
+                    </div>
+
+                    <div id="tickets-list" class="tickets-list">
+                        <h4>📋 Ticket-Liste</h4>
+                        <div id="tickets-container"></div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Error Alert -->
+        <div id="error-alert" class="alert alert-error" style="display: none;">
+            <span class="alert-icon">⚠️</span>
+            <div class="alert-content">
+                <strong>Fehler</strong>
+                <p id="error-message"></p>
+            </div>
+            <button class="alert-close" onclick="closeError()">×</button>
+        </div>
+
+        <!-- Success Alert -->
+        <div id="success-alert" class="alert alert-success" style="display: none;">
+            <span class="alert-icon">✅</span>
+            <div class="alert-content">
+                <strong>Erfolg</strong>
+                <p id="success-message"></p>
+            </div>
+            <button class="alert-close" onclick="closeSuccess()">×</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+
